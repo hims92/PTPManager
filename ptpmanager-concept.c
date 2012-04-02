@@ -10,7 +10,7 @@ int in_sequence;
 NetPath * netPath;
 
 /* Function to pack the header of outgoing message*/
-int packCommonHeader(Octet *message)
+void packCommonHeader(Octet *message)
 {
 	MsgManagement *outgoing = (MsgManagement*)(message);
 	
@@ -35,7 +35,7 @@ int packCommonHeader(Octet *message)
 }
 
 /*Function to pack Management Header*/
-int packManagementHeader(Octet *message)
+void packManagementHeader(Octet *message)
 {
 	//Take inputs for packing Management Header for eg: actionField
 	unsigned char actionField;
@@ -167,29 +167,47 @@ ssize_t
 netRecv(Octet *message)
 {}
 
+/*Function to pack MMClockDescription*/
+void packMMClockDescription()
+{}
+
 /*Function to unpack the header of received message*/
 void unpackHeader(Octet *message, MsgHeader *h)
 {}
 
 /*Function to unpack management header*/
-void unpackManagementHeader(Octet *inmessage, MsgManagement *manage);
+void unpackManagementHeader(Octet *inmessage, MsgManagement *manage)
 {}
 
 /*Function to handle management response and display the required fields*/
-void handleManagementResponse(Octet *inmessage, MsgManagement *manage);
+void handleManagementResponse(Octet *inmessage, MsgManagement *manage)
 {}
 
 /*Function to handle management ack*/
-void handleManagementAck(Octet *inmessage, MsgManagement *manage);
+void handleManagementAck(Octet *inmessage, MsgManagement *manage)
 {}
 
 /*Function to handle management error message*/
-void handleManagementError(Octet *inmessage, MsgManagement *manage);
+void handleManagementError(Octet *inmessage, MsgManagement *manage)
+{}
+
+/*Function to display last received message*/
+void displayMessage(Octet *inmessage)
+{}
+
+/*Function to display all management messages or any one based on user input*/
+void displayManagementFields()
 {}
 
 /*shutdown the network layer*/
 void netShutdown()
 {}
+
+/*Function to parse the command and return a command id*/
+int getCommandId(command)
+{}
+
+
 
 int main(int argc, char *argv[ ])
 {
@@ -204,12 +222,15 @@ int main(int argc, char *argv[ ])
 	out_sequence = 0;
 	in_sequence = 0;
 	out_length = 0;
+	int managementId;
+	
 
+	char command[10];
 	// Command line arguments would include the IP address of PTP daemon and
 	// on which it runs	
 	if(argc !=3)
 	{
-		printf("\nThe input is not in the required format. Please give the IP of PTP daemon\n");
+		printf("\nThe input is not in the required format. Please give the IP of PTP daemon and and its interface name\n");
 		exit(0);
 	}
 
@@ -218,66 +239,91 @@ int main(int argc, char *argv[ ])
 		return;
 	}
 	
+	printf("Enter your command: 'Send' for sending management message, 'show_previous' to display received response, 'show_fields' to see management message fields\n>");
 	
-	printf("Packing Header..\n");
-	packCommonHeader(outmessage);	
-	
-	printf("Packing Management Header...\n");		
-	packManagementHeader(outmessage);
-	
-	
-	printf("Please enter Tlv type and management id\n");
-	scanf("%u, %u",&tlvtype,&managementId);
-	
-	if(tlvtype==TLV_MANAGEMENT)
+	command[0] == '\0';
+	while(strcmp(command,"quit"))
 	{
-		swicth(managementId)
-		{
-			case MM_CLOCK_DESCRIPTION:
-				packMMClockDescription(); 	
-				break;
-			//similarly for other managementIds	
-		}
-	}
-
-	printf("Sending message....\n");
-	
-	if (!netSendGeneral(outmessage, sizeof(outmessage), argv[1]))
-	{
-		printf("Error sending message\n");
-	}
-
-	receivedFlag = FALSE;
-	for (;;) 
-	{
-	
-	//TODO wait for some time to receive a response or ack, if not received till
-	// timeout send the management message again, Use receivedFlag for this.
-
-		if (netRecv(inmessage)) {
-			MsgHeader *h; MsgManagement *manage;
-			unpackHeader(inmessage, h);
-			if(h->messageType == MANAGEMENT)
-			{
-				receivedFlag = TRUE;
-				unpackManagementHeader(inmessage, manage);
-				if(manage->actionField = RESPONSE)
-				{
-					handleManagementResponse(inmessage, manage);
+		scanf("%[^\n]\n",command);
 		
-				}
-				else if(manage->actionField = RESPONSE)
+		switch(getCommandId(command))
+		{
+			
+			case 1:
 				{
-					handleManagementAck(inmessage, manage);
+					printf("Packing Header..\n");
+
+					packCommonHeader(outmessage);	
+					
+					printf("Packing Management Header...\n");		
+					packManagementHeader(outmessage);
+					
+					
+					printf("Please enter Tlv type and management id\n");
+					scanf("%d, %d",&tlvtype,&managementId);
+					
+					if(tlvtype==TLV_MANAGEMENT)
+					{
+						switch(managementId)
+						{
+							case MM_CLOCK_DESCRIPTION:
+								packMMClockDescription(); 	
+								break;
+							//similarly for other managementIds	
+						}
+					}
+
+					printf("Sending message....\n");
+					
+					if (!netSendGeneral(outmessage, sizeof(outmessage), argv[1]))
+					{
+						printf("Error sending message\n");
+					}
+
+					receivedFlag = FALSE;
+					for (;;) 
+					{
+					
+					//TODO wait for some time to receive a response or ack, if not received till
+					// timeout send the management message again, Use receivedFlag for this.
+
+						if (netRecv(inmessage)) {
+							MsgHeader *h; MsgManagement *manage;
+							unpackHeader(inmessage, h);
+							if(h->messageType == MANAGEMENT)
+							{
+								receivedFlag = TRUE;
+								unpackManagementHeader(inmessage, manage);
+								if(manage->actionField = RESPONSE)
+								{
+									handleManagementResponse(inmessage, manage);
+						
+								}
+								else if(manage->actionField = RESPONSE)
+								{
+									handleManagementAck(inmessage, manage);
+								}
+								else if(manage->tlv->tlvType == TLV_MANAGEMENT_ERROR_STATUS)
+								{
+									handleManagementError(inmessage, manage);
+								}
+							}
+						}
+					}
+
 				}
-				else if(manage->tlv->tlvType == TLV_MANAGEMENT_ERROR_STATUS)
-				{
-					handleManagementError(inmessage, manage);
-				}
-			}
+				break;
+			case 2:
+				displayMessage(inmessage);
+				break;
+			case 3:
+				displayManagementFields();
+				break;
+			default:
+				printf("Invalid command\n>");
 		}
 	}
-
+	
 	
 	netShutdown();
 }

@@ -22,6 +22,7 @@
 #define PACKET_SIZE  300
 #define MANAGEMENT 13
 
+
 typedef enum {FALSE=0, TRUE} Boolean;
 typedef char Octet;
 typedef signed char Integer8;
@@ -50,6 +51,7 @@ typedef struct {
 
 int out_length;
 
+Boolean receivedFlag;
 /**
 * \brief Struct used to store network datas
  */
@@ -92,5 +94,11 @@ typedef struct {
 	#include "management.def"
 	ManagementTLV* tlv;
 }MsgManagement;
+
+#define TLV_MANAGEMENT 0
+#define TLV_MANAGEMENT_ERROR_STATUS 1
+#define RESPONSE 0
+#define ACK 1
+#define MM_CLOCK_DESCRIPTION 0
 
 #endif /*MANAGER_H_*/
